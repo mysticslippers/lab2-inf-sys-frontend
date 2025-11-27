@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
-import type { AppDispatch } from './store';
+import type { AppDispatch, RootState } from './store';
 import { wsService } from './api/wsClient';
 
 import RoutesPage from './pages/RoutesPage';
 import LocationsPage from './pages/LocationsPage';
 import CoordinatesPage from './pages/CoordinatesPage';
 import SpecialOperationsPage from './pages/SpecialOperationsPage';
+import ImportPage from './pages/ImportPage';
 
 import {
     fetchRoutesPage,
@@ -22,28 +23,30 @@ import {
     fetchCoordinates,
     applyWebSocketEvent as applyCoordinatesWs,
 } from './store/coordinatesSlice';
+import { logout } from './store/authSlice';
+import LoginModal from './components/auth/LoginModal';
 
-type Tab = 'routes' | 'locations' | 'coordinates' | 'special';
+type Tab = 'routes' | 'locations' | 'coordinates' | 'special' | 'import';
 
 const App: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
+    const auth = useSelector((state: RootState) => state.auth);
+
     const [activeTab, setActiveTab] = useState<Tab>('routes');
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
 
     useEffect(() => {
         wsService.connect();
 
         wsService.onRoutesEvent((event) => {
-            console.log('[WS] Route event:', event);
             dispatch(applyRoutesWs(event));
         });
 
         wsService.onLocationsEvent((event) => {
-            console.log('[WS] Location event:', event);
             dispatch(applyLocationsWs(event));
         });
 
         wsService.onCoordinatesEvent((event) => {
-            console.log('[WS] Coordinates event:', event);
             dispatch(applyCoordinatesWs(event));
         });
 
@@ -60,14 +63,19 @@ const App: React.FC = () => {
                 : 'text-slate-300 hover:text-emerald-400 hover:bg-slate-800/60',
         ].join(' ');
 
+    const handleLogout = () => {
+        dispatch(logout());
+    };
+
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100">
             <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+                <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 gap-4">
                     <h1 className="text-xl font-semibold tracking-tight">
                         Route Manager
                     </h1>
-                    <nav className="flex gap-2 text-sm">
+
+                    <nav className="flex flex-1 justify-center gap-2 text-sm">
                         <button
                             className={tabButtonClass('routes')}
                             onClick={() => setActiveTab('routes')}
@@ -92,7 +100,36 @@ const App: React.FC = () => {
                         >
                             Спец. операции
                         </button>
+                        <button
+                            className={tabButtonClass('import')}
+                            onClick={() => setActiveTab('import')}
+                        >
+                            Импорт
+                        </button>
                     </nav>
+
+                    <div className="flex items-center gap-2">
+                        {auth.status === 'authenticated' && auth.username ? (
+                            <>
+                                <span className="text-sm text-slate-300">
+                                    👤 {auth.username}
+                                </span>
+                                <button
+                                    onClick={handleLogout}
+                                    className="rounded-xl border border-slate-600 px-3 py-1 text-xs hover:bg-slate-800"
+                                >
+                                    Выйти
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => setLoginModalOpen(true)}
+                                className="rounded-xl bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700"
+                            >
+                                Войти
+                            </button>
+                        )}
+                    </div>
                 </div>
             </header>
 
@@ -101,7 +138,13 @@ const App: React.FC = () => {
                 {activeTab === 'locations' && <LocationsPage />}
                 {activeTab === 'coordinates' && <CoordinatesPage />}
                 {activeTab === 'special' && <SpecialOperationsPage />}
+                {activeTab === 'import' && <ImportPage />}
             </main>
+
+            <LoginModal
+                open={loginModalOpen}
+                onClose={() => setLoginModalOpen(false)}
+            />
 
             <ToastContainer
                 position="bottom-right"
