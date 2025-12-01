@@ -4,11 +4,20 @@ import { getApiErrorMessage } from '../utils/errorUtils';
 
 const TOKEN_KEY = 'auth_basic_token';
 const USERNAME_KEY = 'auth_username';
+const ROLE_KEY = 'auth_role';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'error';
+export type UserRole = 'USER' | 'ADMIN';
+
+interface UserDTO {
+    id: number;
+    username: string;
+    role: UserRole;
+}
 
 interface AuthState {
     username: string | null;
+    role: UserRole | null;
     token: string | null;
     status: AuthStatus;
     error?: string;
@@ -16,10 +25,13 @@ interface AuthState {
 
 let initialToken: string | null = null;
 let initialUsername: string | null = null;
+let initialRole: UserRole | null = null;
 
 if (typeof window !== 'undefined') {
     initialToken = localStorage.getItem(TOKEN_KEY);
     initialUsername = localStorage.getItem(USERNAME_KEY);
+    const storedRole = localStorage.getItem(ROLE_KEY) as UserRole | null;
+    initialRole = storedRole ?? null;
 
     if (initialToken) {
         http.defaults.headers.common['Authorization'] = `Basic ${initialToken}`;
@@ -28,26 +40,33 @@ if (typeof window !== 'undefined') {
 
 const initialState: AuthState = {
     username: initialUsername,
+    role: initialRole,
     token: initialToken,
     status: initialToken ? 'authenticated' : 'idle',
     error: undefined,
 };
 
 export const login = createAsyncThunk<
-    { username: string; token: string },
+    { username: string; role: UserRole; token: string },
     { username: string; password: string },
     { rejectValue: string }
 >('auth/login', async ({ username, password }, { rejectWithValue }) => {
     const token = btoa(`${username}:${password}`);
 
     try {
-        await http.get('/import/operations/my', {
+        const response = await http.get<UserDTO>('/me', {
             headers: {
                 Authorization: `Basic ${token}`,
             },
         });
 
-        return { username, token };
+        const user = response.data;
+
+        return {
+            username: user.username,
+            role: user.role,
+            token,
+        };
     } catch (err: any) {
         const msg = getApiErrorMessage(err, 'Неверные имя пользователя или пароль');
         return rejectWithValue(msg);
@@ -60,6 +79,7 @@ const authSlice = createSlice({
     reducers: {
         logout(state) {
             state.username = null;
+            state.role = null;
             state.token = null;
             state.status = 'idle';
             state.error = undefined;
@@ -67,6 +87,7 @@ const authSlice = createSlice({
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(TOKEN_KEY);
                 localStorage.removeItem(USERNAME_KEY);
+                localStorage.removeItem(ROLE_KEY);
             }
 
             delete http.defaults.headers.common['Authorization'];
@@ -84,12 +105,14 @@ const authSlice = createSlice({
             .addCase(login.fulfilled, (state, action) => {
                 state.status = 'authenticated';
                 state.username = action.payload.username;
+                state.role = action.payload.role;
                 state.token = action.payload.token;
                 state.error = undefined;
 
                 if (typeof window !== 'undefined') {
                     localStorage.setItem(TOKEN_KEY, action.payload.token);
                     localStorage.setItem(USERNAME_KEY, action.payload.username);
+                    localStorage.setItem(ROLE_KEY, action.payload.role);
                 }
 
                 http.defaults.headers.common['Authorization'] =
@@ -100,6 +123,7 @@ const authSlice = createSlice({
                 state.error =
                     action.payload ?? 'Не удалось войти. Проверьте логин и пароль.';
                 state.username = null;
+                state.role = null;
                 state.token = null;
 
                 delete http.defaults.headers.common['Authorization'];
@@ -107,6 +131,7 @@ const authSlice = createSlice({
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem(TOKEN_KEY);
                     localStorage.removeItem(USERNAME_KEY);
+                    localStorage.removeItem(ROLE_KEY);
                 }
             });
     },
