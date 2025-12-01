@@ -10,6 +10,7 @@ import LocationsPage from './pages/LocationsPage';
 import CoordinatesPage from './pages/CoordinatesPage';
 import SpecialOperationsPage from './pages/SpecialOperationsPage';
 import ImportPage from './pages/ImportPage';
+import UsersPage from './pages/UsersPage'; // ← НОВОЕ
 
 import {
     fetchRoutesPage,
@@ -26,7 +27,7 @@ import {
 import { logout } from './store/authSlice';
 import LoginModal from './components/auth/LoginModal';
 
-type Tab = 'routes' | 'locations' | 'coordinates' | 'special' | 'import';
+type Tab = 'routes' | 'locations' | 'coordinates' | 'special' | 'import' | 'users';
 
 const App: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
@@ -67,6 +68,8 @@ const App: React.FC = () => {
         dispatch(logout());
     };
 
+    const isAdmin = auth.role === 'ADMIN';
+
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100">
             <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
@@ -106,6 +109,14 @@ const App: React.FC = () => {
                         >
                             Импорт
                         </button>
+                        {isAdmin && (
+                            <button
+                                className={tabButtonClass('users')}
+                                onClick={() => setActiveTab('users')}
+                            >
+                                Пользователи
+                            </button>
+                        )}
                     </nav>
 
                     <div className="flex items-center gap-2">
@@ -113,6 +124,11 @@ const App: React.FC = () => {
                             <>
                                 <span className="text-sm text-slate-300">
                                     👤 {auth.username}
+                                    {auth.role === 'ADMIN' && (
+                                        <span className="ml-1 text-xs text-emerald-400">
+                                            (ADMIN)
+                                        </span>
+                                    )}
                                 </span>
                                 <button
                                     onClick={handleLogout}
@@ -139,6 +155,7 @@ const App: React.FC = () => {
                 {activeTab === 'coordinates' && <CoordinatesPage />}
                 {activeTab === 'special' && <SpecialOperationsPage />}
                 {activeTab === 'import' && <ImportPage />}
+                {activeTab === 'users' && <UsersPage />}
             </main>
 
             <LoginModal
