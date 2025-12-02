@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store';
+import { fetchRoutesPage } from '../store/routesSlice';
+import { fetchLocations } from '../store/locationsSlice';
+import { fetchCoordinates } from '../store/coordinatesSlice';
 
 import ImportHistoryTable from '../components/import/ImportHistoryTable';
 import ImportUploadModal from '../components/import/ImportUploadModal';
@@ -62,6 +65,10 @@ const ImportPage: React.FC = () => {
 
     const handleUploaded = (op: ImportOperationDTO) => {
         dispatch(prependOperation(op));
+
+        dispatch(fetchRoutesPage());
+        dispatch(fetchLocations());
+        dispatch(fetchCoordinates());
         toast.success('Импорт запущен');
     };
 
