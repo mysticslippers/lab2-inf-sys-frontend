@@ -10,7 +10,8 @@ import LocationsPage from './pages/LocationsPage';
 import CoordinatesPage from './pages/CoordinatesPage';
 import SpecialOperationsPage from './pages/SpecialOperationsPage';
 import ImportPage from './pages/ImportPage';
-import UsersPage from './pages/UsersPage'; // ← НОВОЕ
+import UsersPage from './pages/UsersPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import {
     fetchRoutesPage,
@@ -35,6 +36,23 @@ const App: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState<Tab>('routes');
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (pathname.startsWith('/reset-password')) {
+        return (
+            <>
+                <ResetPasswordPage />
+                <ToastContainer
+                    position="bottom-right"
+                    theme="dark"
+                    autoClose={2500}
+                    pauseOnHover
+                    closeOnClick
+                    newestOnTop
+                />
+            </>
+        );
+    }
 
     useEffect(() => {
         wsService.connect();
